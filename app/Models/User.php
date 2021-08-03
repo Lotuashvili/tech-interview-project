@@ -19,6 +19,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
  * @property string|null $remember_token
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\Achievement[] $achievements
+ * @property-read int|null $achievements_count
  * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\Comment[] $comments
  * @property-read int|null $comments_count
  * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\Lesson[] $lessons
@@ -103,5 +105,15 @@ class User extends Authenticatable
     public function watched(): BelongsToMany
     {
         return $this->belongsToMany(Lesson::class)->wherePivot('watched', true);
+    }
+
+    /**
+     * Achievements relation with custom Pivot model
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
+    public function achievements(): BelongsToMany
+    {
+        return $this->belongsToMany(Achievement::class)->using(AchievementUser::class)->withTimestamps();
     }
 }
