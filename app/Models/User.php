@@ -209,7 +209,7 @@ class User extends Authenticatable
         ])->whereDoesntHave('users', fn($query) => $query->where('id', $this->id));
 
         return DB::table($query)
-            ->select('name')
+            ->select(['id', 'name', 'count', 'achievable_type'])
             ->where('row_num', 1) // Filter first rows in groups
             ->get();
     }
