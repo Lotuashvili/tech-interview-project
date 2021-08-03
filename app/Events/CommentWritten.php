@@ -10,12 +10,15 @@ class CommentWritten
 {
     use Dispatchable, SerializesModels;
 
-    public $comment;
+    /**
+     * @var \App\Models\Comment
+     */
+    public Comment $comment;
 
     /**
      * Create a new event instance.
      *
-     * @return void
+     * @param \App\Models\Comment $comment
      */
     public function __construct(Comment $comment)
     {

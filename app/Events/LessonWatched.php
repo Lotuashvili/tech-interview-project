@@ -11,13 +11,21 @@ class LessonWatched
 {
     use Dispatchable, SerializesModels;
 
-    public $lesson;
-    public $user;
+    /**
+     * @var \App\Models\Lesson
+     */
+    public Lesson $lesson;
+
+    /**
+     * @var \App\Models\User
+     */
+    public User $user;
 
     /**
      * Create a new event instance.
      *
-     * @return void
+     * @param \App\Models\Lesson $lesson
+     * @param \App\Models\User $user
      */
     public function __construct(Lesson $lesson, User $user)
     {
