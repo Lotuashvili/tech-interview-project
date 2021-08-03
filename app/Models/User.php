@@ -23,6 +23,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
  * @property-read int|null $achievements_count
  * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\Comment[] $comments
  * @property-read int|null $comments_count
+ * @property-read string $badge
  * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\Lesson[] $lessons
  * @property-read int|null $lessons_count
  * @property-read \Illuminate\Notifications\DatabaseNotificationCollection|\Illuminate\Notifications\DatabaseNotification[] $notifications
@@ -115,5 +116,24 @@ class User extends Authenticatable
     public function achievements(): BelongsToMany
     {
         return $this->belongsToMany(Achievement::class)->using(AchievementUser::class)->withTimestamps();
+    }
+
+    /**
+     * Return current badge name depending on achievements count
+     *
+     * @return string
+     */
+    public function getBadgeAttribute(): string
+    {
+        $achievements = $this->achievements()->count();
+        $badges = config('settings.badges');
+
+        if (array_key_exists($achievements, $badges)) {
+            return $badges[$achievements];
+        }
+
+        $key = collect($badges)->keys()->filter(fn(int $count) => $count <= $achievements)->sort()->last() ?: 0;
+
+        return $badges[$key];
     }
 }
