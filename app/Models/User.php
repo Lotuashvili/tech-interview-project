@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * App\Models\User
@@ -24,6 +26,10 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
  * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\Comment[] $comments
  * @property-read int|null $comments_count
  * @property-read string $badge
+ * @property-read Collection $next_available_achievements
+ * @property-read string|null $next_badge
+ * @property-read int|null $next_badge_key
+ * @property-read int $remaining_to_unlock_next_badge
  * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\Lesson[] $lessons
  * @property-read int|null $lessons_count
  * @property-read \Illuminate\Notifications\DatabaseNotificationCollection|\Illuminate\Notifications\DatabaseNotification[] $notifications
@@ -135,5 +141,76 @@ class User extends Authenticatable
         $key = collect($badges)->keys()->filter(fn(int $count) => $count <= $achievements)->sort()->last() ?: 0;
 
         return $badges[$key];
+    }
+
+    /**
+     * Return achievements count for the next badge
+     * Returns null if user already has the highest badge
+     *
+     * @return int|null
+     */
+    public function getNextBadgeKeyAttribute(): ?int
+    {
+        $achievements = $this->achievements()->count();
+
+        return collect(config('settings.badges'))->keys()->filter(fn(int $count) => $count > $achievements)->sort()->first();
+    }
+
+    /**
+     * Return next available badge or null
+     *
+     * @return string|null
+     */
+    public function getNextBadgeAttribute(): ?string
+    {
+        $key = $this->next_badge_key;
+
+        if (is_null($key)) {
+            return null;
+        }
+
+        return config('settings.badges.' . $key);
+    }
+
+    /**
+     * Return count of remaining achievements to the next badge
+     *
+     * @return int
+     */
+    public function getRemainingToUnlockNextBadgeAttribute(): int
+    {
+        $key = $this->next_badge_key;
+
+        if (is_null($key)) {
+            return 0;
+        }
+
+        return max($key - $this->achievements()->count(), 0);
+    }
+
+    /**
+     * Return next available achievements
+     * Grouped by "achievable_type"
+     *
+     * Using MySQL 8 Window Functions
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    public function getNextAvailableAchievementsAttribute(): Collection
+    {
+        // Using window functions from MySQL 8
+        // Partition achievements by type and select only first record from group
+        $query = Achievement::select([
+            'id',
+            'name',
+            'count',
+            'achievable_type',
+            DB::raw('ROW_NUMBER() OVER(PARTITION BY achievable_type ORDER BY count ASC) AS row_num'),
+        ])->whereDoesntHave('users', fn($query) => $query->where('id', $this->id));
+
+        return DB::table($query)
+            ->select('name')
+            ->where('row_num', 1) // Filter first rows in groups
+            ->get();
     }
 }
